@@ -104,7 +104,6 @@ def get_groups_with_images():
     status_filter = request.args.get('status')
     groups_per_page = DEFAULT_PAGINATION_NUMBER_OF_GROUPS_TO_RETURN
     groups_per_page = request.args.get('groups_per_page') or groups_per_page
-    print(groups_per_page)
     page_to_return = request.args.get('page')
 
     pipeline = [
