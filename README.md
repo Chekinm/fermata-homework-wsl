@@ -70,10 +70,16 @@ This endpoint retrieves a list of groups with associated images. It performs the
 
 - `status` (optional): Filters the images by status. If provided and valid, the response will only include images with the specified status.
 
+- `page` (optional): Pagination paramter. If specified paginated response returned.
+    starting group number would be (page * groups_to_return). You can specify default number groups_to_return in config.py. If not specified no paginating occurs.
+
+- `groups_to_return` (optional): Specify the number of groups to return if page parameter is specified.
+    If groups_to_return is missed in request - default value from config.py is used.
+
 #### Example Usage
 
 ```http
-GET /groups?status=approved
+GET /groups?status=approved&page=0&groups_to_return=2
 ```
 
 #### Response
@@ -81,33 +87,43 @@ GET /groups?status=approved
 ```json
 [
     {
-        "_id": "ObjectId",
+        "_id": {
+                "$oid": "65071d4096b52de451f914e0"
+            },
         "name": "Group 1",
         "images": [
             {
-                "_id": "ObjectId",
-                "name": "Image 1",
+                "_id": {
+                    "$oid": "65071d3c96b52de451f914d9"
+                    },
                 "status": "approved",
-                "created_at": "2023-09-18T12:00:00Z"
+                "created_at": "2023-09-18T12:00:00Z",
+                "last_updated_at": "2023-09-28T13:00:00Z"
             },
             {
-                "_id": "ObjectId",
-                "name": "Image 2",
+                "_id": {
+                    "$oid": "65071d3a96b52de451f914d6"
+                    },  
                 "status": "approved",
-                "created_at": "2023-09-18T13:00:00Z"
+                "created_at": "2023-09-18T13:00:00Z",
+                "last_updated_at": "2023-09-28T13:01:00Z"
             }
         ],
         "count": 2
     },
     {
-        "_id": "ObjectId",
+        "_id": {
+                "$oid": "65071d3b96b52de451f914d8"
+            },
         "name": "Group 2",
         "images": [
             {
-                "_id": "ObjectId",
-                "name": "Image 3",
+                "_id": {
+                    "$oid": "65071d3b96b52de451f914d7"
+                    },
                 "status": "approved",
-                "created_at": "2023-09-18T14:00:00Z"
+                "created_at": "2023-09-18T14:00:00Z",
+                "last_updated_at": "2023-09-28T13:02:00Z"
             }
         ],
         "count": 1
