@@ -8,7 +8,10 @@ from werkzeug.exceptions import HTTPException
 import json
 from utils.utils import sanitize_json
 from models.models import images_collection, groups_collection
-from config.config import (VALID_STATUSES, STATISTIC_NUMBER_OF_DAYS)
+from config.config import (VALID_STATUSES, 
+                           STATISTIC_NUMBER_OF_DAYS,
+                           DEFAULT_PAGINATION_NUMBER_OF_GROUPS_TO_RETURN,
+                           )
 
 
 @app.route('/groups', methods=['GET'])
@@ -22,6 +25,7 @@ def get_groups_with_images():
     2. Sorts and filters the list of images, if necessary.
     3. Groups the images by their associated group and counts them.
     4. Returns a JSON response with the grouped data.
+    5. Optionaly paginate response.
 
     Args:
         None
@@ -34,6 +38,11 @@ def get_groups_with_images():
         only include images with the specified status.
         If the 'status' parameter is invalid,
         a 400 Bad Request response is returned.
+        If a 'page' query parameter is provided and is a valid integer,
+        the response will paginate.
+        IF a 'groups_per_page' parameter is provided pagination will return
+        groups_per_page groups starting from
+        group number page * groups_per_page.
 
     HTTP Methods:
         GET
@@ -42,47 +51,61 @@ def get_groups_with_images():
         /groups
 
     Example Usage:
-        GET /groups?status=approved
+        GET /groups?status=approved&page=0&groups_per_page=1
 
     Response:
-        [
-            {
-                "_id": ObjectId("5f76b5c5a548ebe57f213b3a"),
-                "name": "Group 1",
-                "images": [
-                    {
-                        "_id": ObjectId("5f76b5c5a548ebe57f213b3b"),
-                        "name": "Image 1",
-                        "status": "approved",
-                        "created_at": "2023-09-18T12:00:00Z"
-                    },
-                    {
-                        "_id": ObjectId("5f76b5c5a548ebe57f213b3c"),
-                        "name": "Image 2",
-                        "status": "approved",
-                        "created_at": "2023-09-18T13:00:00Z"
-                    }
-                ],
-                "count": 2
-            },
-            {
-                "_id": ObjectId("5f76b5c5a548ebe57f213b3d"),
-                "name": "Group 2",
-                "images": [
-                    {
-                        "_id": ObjectId("5f76b5c5a548ebe57f213b3e"),
-                        "name": "Image 3",
-                        "status": "approved",
-                        "created_at": "2023-09-18T14:00:00Z"
-                    }
-                ],
-                "count": 1
-            }
-        ]
+    [
+        {
+            "_id": 
+                {
+                "$oid": "65071d2d96b52de451f914c0"
+                },
+            "count": 2,
+            "images": [
+                {
+                "_id": {
+                "$oid": "65071d2f96b52de451f914c2"
+                },
+                "created_at": {
+                "$date": "2023-09-17T15:37:19.276Z"
+                },
+                "group_id": {
+                "$oid": "65071d2d96b52de451f914c0"
+                },
+                "last_updated_at": {
+                "$date": "2023-09-28T11:04:39.472Z"
+                },
+                "status": "approved",
+                "url": "https://fermataimages.s3.us-west-2.amazonaws.com/output/group_0_image_1.png"
+                },
+                {
+                "_id": {
+                "$oid": "65071d2e96b52de451f914c1"
+                },
+                "created_at": {
+                "$date": "2023-09-17T15:37:18.683Z"
+                },
+                "group_id": {
+                "$oid": "65071d2d96b52de451f914c0"
+                },
+                "last_updated_at": {
+                "$date": "2023-09-28T10:57:23.642Z"
+                },
+                "status": "approved",
+                "url": "https://fermataimages.s3.us-west-2.amazonaws.com/output/group_0_image_0.png"
+                },
+            ],
+            "name": "Group 0"
+        }
+    ]
 
     """
 
     status_filter = request.args.get('status')
+    groups_per_page = DEFAULT_PAGINATION_NUMBER_OF_GROUPS_TO_RETURN
+    groups_per_page = request.args.get('groups_per_page') or groups_per_page
+    print(groups_per_page)
+    page_to_return = request.args.get('page')
 
     pipeline = [
         # 1 stage join collections by group_id field
@@ -103,7 +126,9 @@ def get_groups_with_images():
             # 3d stage
             # sort by creation date
             '$sort': {
-                'images.created_at': 1
+                # 'images.created_at': 1
+                'images.last_updated_at': -1
+
             }
 
         },
@@ -117,6 +142,12 @@ def get_groups_with_images():
                 'count':  {'$sum': 1}
             }
         },
+        {
+            # for debuging purposes we don't need this sort in production
+            '$sort': {
+                'name': 1
+            }
+        },
     ]
 
     if status_filter and escape(status_filter) in VALID_STATUSES:
@@ -127,6 +158,28 @@ def get_groups_with_images():
             "name": "Invalid status",
             "description": (f"Valid statuses are - {VALID_STATUSES}"),
             }), 400
+
+    # add pagination if we have a big number of groups
+    if page_to_return:
+        try:
+            skip = int(escape(page_to_return)) * int(escape(groups_per_page))
+            limit = int(escape(groups_per_page))
+        except ValueError:
+            print(page_to_return, type(page_to_return))
+            return jsonify({
+                            "code": 400,
+                            "name": "Invalid values of query parameters",
+                            "description": "Page and page_to_return value supposed to be integer",
+                            }), 400
+        pipeline.extend([
+                            {
+                                '$skip': skip
+                            },
+                            {
+                                '$limit': limit
+                            },
+                        ])
+   
 
     groups = sanitize_json(list(groups_collection.aggregate(pipeline)))
 
@@ -234,12 +287,18 @@ def update_image_status(image_id):
             }), 400
 
     try:
-        result = images_collection.update_one({'_id': image_id},
-                                              {'$set': {
-                                                'status': new_status,
-                                                'last_updated_at': datetime.utcnow()
-                                                }})
-                                    
+        result = images_collection.update_one(
+            {
+                '_id': image_id
+            },
+            {
+                '$set': {
+                      'status': new_status,
+                      'last_updated_at': datetime.utcnow()
+                      }
+            }
+            )
+
         if result.modified_count:
             return jsonify({
                 'message': 'Image status updated'

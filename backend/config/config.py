@@ -19,3 +19,7 @@ FLASK_HOST = "127.0.0.1" if FLASK_DEBUG else "0.0.0.0"
 # constants
 VALID_STATUSES = ['new', 'review', 'accepted', 'deleted']
 STATISTIC_NUMBER_OF_DAYS = 30
+
+# pagination constants
+DEFAULT_PAGINATION_NUMBER_OF_GROUPS_TO_RETURN=2 # what ever you want
+

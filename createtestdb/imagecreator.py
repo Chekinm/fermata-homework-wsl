@@ -108,6 +108,7 @@ for group_numer in range(n):
                                         )
         image = {
             'created_at': datetime.utcnow(),
+            'last_updated_at': datetime.utcnow(),
             'url': image_url,
             'status': statuses[image_number % 4],
             'group_id': group_id
