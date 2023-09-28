@@ -1,0 +1,7 @@
+# mongodb config
+# MONGO_URI=mongodb://localhost:27017/
+MONGODB_URI=_your_mongo_Db_URI_from_Atlas
+MONGODB_DB_NAME=image_service_test
+#MONGODB_TEST_DB_NAME=image_service_test
+MONGODB_IMAGE_COLLECTION_NAME=images
+MONGODB_GROUPS_COLLECTION_NAME=groups
