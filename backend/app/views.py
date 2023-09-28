@@ -8,7 +8,7 @@ from werkzeug.exceptions import HTTPException
 import json
 from utils.utils import sanitize_json
 from models.models import images_collection, groups_collection
-from config.config import (VALID_STATUSES, 
+from config.config import (VALID_STATUSES,
                            STATISTIC_NUMBER_OF_DAYS,
                            DEFAULT_PAGINATION_NUMBER_OF_GROUPS_TO_RETURN,
                            )
@@ -56,7 +56,7 @@ def get_groups_with_images():
     Response:
     [
         {
-            "_id": 
+            "_id":
                 {
                 "$oid": "65071d2d96b52de451f914c0"
                 },
@@ -76,7 +76,7 @@ def get_groups_with_images():
                 "$date": "2023-09-28T11:04:39.472Z"
                 },
                 "status": "approved",
-                "url": "https://fermataimages.s3.us-west-2.amazonaws.com/output/group_0_image_1.png"
+                "url": "https://images_service.com/output/group_0_image_1.png"
                 },
                 {
                 "_id": {
@@ -92,7 +92,7 @@ def get_groups_with_images():
                 "$date": "2023-09-28T10:57:23.642Z"
                 },
                 "status": "approved",
-                "url": "https://fermataimages.s3.us-west-2.amazonaws.com/output/group_0_image_0.png"
+                "url": "https://images_service.com/output//group_0_image_0.png"
                 },
             ],
             "name": "Group 0"
@@ -163,13 +163,12 @@ def get_groups_with_images():
         try:
             skip = int(escape(page_to_return)) * int(escape(groups_per_page))
             limit = int(escape(groups_per_page))
-        except ValueError:
-            print(page_to_return, type(page_to_return))
+        except ValueError as err:
             return jsonify({
-                            "code": 400,
-                            "name": "Invalid values of query parameters",
-                            "description": "Page and page_to_return value supposed to be integer",
-                            }), 400
+                "code": 400,
+                "name": "Invalid values of query parameters",
+                "description": str(err),
+                }), 400
         pipeline.extend([
                             {
                                 '$skip': skip
@@ -178,7 +177,6 @@ def get_groups_with_images():
                                 '$limit': limit
                             },
                         ])
-   
 
     groups = sanitize_json(list(groups_collection.aggregate(pipeline)))
 
