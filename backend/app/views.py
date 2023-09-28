@@ -235,7 +235,11 @@ def update_image_status(image_id):
 
     try:
         result = images_collection.update_one({'_id': image_id},
-                                              {'$set': {'status': new_status}})
+                                              {'$set': {
+                                                'status': new_status,
+                                                'last_updated_at': datetime.utcnow()
+                                                }})
+                                    
         if result.modified_count:
             return jsonify({
                 'message': 'Image status updated'
