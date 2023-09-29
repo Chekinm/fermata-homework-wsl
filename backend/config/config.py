@@ -21,5 +21,8 @@ VALID_STATUSES = ['new', 'review', 'accepted', 'deleted']
 STATISTIC_NUMBER_OF_DAYS = 30
 
 # pagination constants
-DEFAULT_PAGINATION_NUMBER_OF_GROUPS_TO_RETURN=2 # what ever you want
-
+#
+# set to 1, so default page=3 will return group number 3
+# so we will have both pagination and ability
+# to access any particualr group
+DEFAULT_PAGINATION_NUMBER_OF_GROUPS_TO_RETURN = 1
