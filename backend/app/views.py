@@ -284,32 +284,39 @@ def update_image_status(image_id):
             }), 400
 
     try:
-        result = images_collection.update_one(
-            {
-                '_id': image_id
-            },
-            {
-                '$set': {
-                      'status': new_status,
-                      'last_updated_at': datetime.utcnow()
-                      }
-            }
+        # Get the current status before updating
+        current_status = images_collection.find_one(
+            {'_id': image_id},
+            {'status': 1},
             )
+        current_status = current_status['status'] if current_status else None
 
-        if result.modified_count:
-            return jsonify({
-                'message': 'Image status updated'
-                }), 200
-        elif result.matched_count:
-            return jsonify({
-                'message': 'Requested status is the same as current',
-                }), 200
+        if new_status != current_status:
+            result = images_collection.update_one(
+                {
+                    '_id': image_id
+                },
+                {
+                    '$set': {
+                        'status': new_status,
+                        'last_updated_at': datetime.utcnow()
+                        }
+                }
+                )
+            if result.modified_count:
+                return jsonify({
+                    'message': 'Image status updated'
+                    }), 200
+            else:
+                return jsonify({
+                    "code": 400,
+                    "name": "Image not found",
+                    "description": "Specified ID was not found in database",
+                    }), 400
         else:
             return jsonify({
-                "code": 400,
-                "name": "Image not found",
-                "description": "Specified ID was not found in database",
-                }), 400
+                'message': 'Requested status is the same as current'
+                }), 200
 
     except Exception as err:
         return jsonify({

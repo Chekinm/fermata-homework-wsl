@@ -1,6 +1,7 @@
 import unittest
 import json
 from app import app
+from config.config import VALID_STATUSES
 
 
 class TestGroupsAPI(unittest.TestCase):
@@ -8,7 +9,7 @@ class TestGroupsAPI(unittest.TestCase):
     def setUp(self):
         """ 1. You need to  populate database with imagecreator.py from
             create_test_db first
-            2. in backend/.env file chenge MONGODB_DB_NAME=image_service to
+            2. in backend/.env file change MONGODB_DB_NAME=image_service to
             MONGODB_TEST_DB_NAME=image_service_test
             TODO refactor app module to work as app facctory and
             use app.config.fromobject from FLASK
@@ -71,9 +72,24 @@ class TestGroupsAPI(unittest.TestCase):
                          "The method is not allowed for the requested URL.",
                          )
 
-        def test_get_groups_with_images(self):
-            response = self.app.get('/groups')
+    def test_valid_endpoint_valid_method(self):
+        response = self.app.get('/groups')
+        self.assertEqual(response.status_code, 200)
+
+    # test filtering
+    def test_filter_by_valid_status(self):
+
+        for status in VALID_STATUSES:
+
+            response = self.app.get('/groups?status='+status)
             self.assertEqual(response.status_code, 200)
+            data = response.get_json()
+            print(data[0]['count'])
+            self.assertEqual(data[0]['count'], 3)
+            # self.assertEqual(data["name"], "Method Not Allowed")
+            # self.assertEqual(data["description"],
+            #                 "The method is not allowed for the requested URL.",
+            #                 )
 
 
 class TestImageStatusChangeAPI(unittest.TestCase):
@@ -81,7 +97,7 @@ class TestImageStatusChangeAPI(unittest.TestCase):
     def setUp(self):
         """ 1. You need to  populate database with imagecreator.py from
             create_test_db first
-            2. in backend/.env file chenge MONGODB_DB_NAME=image_service to
+            2. in backend/.env file change MONGODB_DB_NAME=image_service to
             MONGODB_TEST_DB_NAME=image_service_test
             TODO refactor app module to work as app facctory and
             use app.config.fromobject from FLASK
@@ -90,44 +106,33 @@ class TestImageStatusChangeAPI(unittest.TestCase):
 
     def test_update_image_status_valid(self):
         # get image Id of the first image in group
-        # we know for created that it status is new
+        # we know that for newly created db
+        # status of the first image is new
         response = self.app.get('/groups')
         data = response.get_json()
         image_id = data[0]['images'][0]['_id']['$oid']
 
-        # define 4valid status
-        data_new = {'status': 'new'}
-        data_accepted = {'status': 'accepted'}
-        data_deleted = {'status': 'deleted'}
-        data_review = {'status': 'review'}
+        # define four valid statuses
+        # new is is last as current is new
+        valid_data_to_put = [{'status': 'accepted'},
+                             {'status': 'deleted'},
+                             {'status': 'review'},
+                             {'status': 'new'},
+                             ]
 
-        # cehck if we can change status to any valid one
-        response = self.app.put(f'/images/{image_id}',
-                                data=json.dumps(data_accepted),
-                                content_type='application/json',
-                                )
-        self.assertEqual(response.status_code, 200)
+        # check if we can change status to any valid one
+        for data_to_put in valid_data_to_put:
 
-        response = self.app.put(f'/images/{image_id}',
-                                data=json.dumps(data_deleted),
-                                content_type='application/json',
-                                )
-        self.assertEqual(response.status_code, 200)
+            response = self.app.put(f'/images/{image_id}',
+                                    data=json.dumps(data_to_put),
+                                    content_type='application/json',
+                                    )
+            self.assertEqual(response.status_code, 200)
 
+        # to change status one more time to check same
+        # status handling
         response = self.app.put(f'/images/{image_id}',
-                                data=json.dumps(data_review),
-                                content_type='application/json',
-                                )
-        self.assertEqual(response.status_code, 200)
-
-        response = self.app.put(f'/images/{image_id}',
-                                data=json.dumps(data_new),
-                                content_type='application/json',
-                                )
-        self.assertEqual(response.status_code, 200)
-
-        response = self.app.put(f'/images/{image_id}',
-                                data=json.dumps(data_new),
+                                data=json.dumps(valid_data_to_put[3]),
                                 content_type='application/json',
                                 )
         answer = response.get_json()
@@ -158,8 +163,9 @@ class TestImageStatusChangeAPI(unittest.TestCase):
     def test_update_image_invalid_id(self):
 
         data = {'status': 'new'}
+        invalid_object_id_url = '/images/notvalidatall'
 
-        response = self.app.put('/images/notvalidatall',
+        response = self.app.put(invalid_object_id_url,
                                 data=json.dumps(data),
                                 content_type='application/json',
                                 )
@@ -174,8 +180,9 @@ class TestImageStatusChangeAPI(unittest.TestCase):
     def test_update_image_valid_but_nonexistingid(self):
 
         data = {'status': 'new'}
+        non_existaning_object_url = '/images/123456789012345678901234'
 
-        response = self.app.put('/images/123456789012345678901234',
+        response = self.app.put(non_existaning_object_url,
                                 data=json.dumps(data),
                                 content_type='application/json',
                                 )
@@ -193,7 +200,7 @@ class TestImageStatistics(unittest.TestCase):
     def setUp(self):
         """ 1. You need to  populate database with imagecreator.py from
             create_test_db first
-            2. in backend/.env file chenge MONGODB_DB_NAME=image_service to
+            2. in backend/.env file change MONGODB_DB_NAME=image_service to
             MONGODB_TEST_DB_NAME=image_service_test
             TODO refactor app module to work as app facctory and
             use app.config.fromobject from FLASK
@@ -219,9 +226,9 @@ class TestImageStatistics(unittest.TestCase):
         data_accepted = {'status': 'accepted'}
 
         # change status from new to accepted
-        # we suppose that first image in groupe have sgtatus new
+        # we suppose that first image in group have status new
         # as we create test database so.
-        # TODO we a not suupose to use met information in test need to rewrite
+        # TODO better not to use meta information in tests need to rewrite
         response = self.app.put(f'/images/{image_id}',
                                 data=json.dumps(data_accepted),
                                 content_type='application/json',
